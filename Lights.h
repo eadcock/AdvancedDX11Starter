@@ -12,6 +12,17 @@
 #define LIGHT_TYPE_POINT		1
 #define LIGHT_TYPE_SPOT			2
 
+// String representations of light types
+constexpr const char* TypeToString(int value) {
+	if (value <= 0) {
+		return "Directional";
+	}
+	if (value == 1) {
+		return "Point";
+	}
+	return "Spot";
+}
+
 struct Light
 {
 	int					Type;

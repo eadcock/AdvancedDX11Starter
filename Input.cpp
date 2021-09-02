@@ -173,7 +173,7 @@ bool Input::KeyDown(int key)
 {
 	if (key < 0 || key > 255) return false;
 
-	return (kbState[key] & 0x80) != 0;
+	return (kbState[key] & 0x80) != 0 && !guiWantsKeyboard;
 }
 
 // ----------------------------------------------------------
@@ -187,7 +187,7 @@ bool Input::KeyUp(int key)
 {
 	if (key < 0 || key > 255) return false;
 
-	return !(kbState[key] & 0x80);
+	return !(kbState[key] & 0x80) && !guiWantsKeyboard;
 }
 
 // ----------------------------------------------------------
@@ -202,6 +202,7 @@ bool Input::KeyPress(int key)
 	if (key < 0 || key > 255) return false;
 
 	return
+		!guiWantsKeyboard &&
 		kbState[key] & 0x80 &&			// Down now
 		!(prevKbState[key] & 0x80);		// Up last frame
 }
@@ -218,6 +219,7 @@ bool Input::KeyRelease(int key)
 	if (key < 0 || key > 255) return false;
 
 	return
+		!guiWantsKeyboard &&
 		!(kbState[key] & 0x80) &&	// Up now
 		prevKbState[key] & 0x80;	// Down last frame
 }
@@ -254,28 +256,28 @@ bool Input::GetKeyArray(bool* keyArray, int size)
 // ----------------------------------------------------------
 //  Is the specific mouse button down this frame?
 // ----------------------------------------------------------
-bool Input::MouseLeftDown() { return (kbState[VK_LBUTTON] & 0x80) != 0; }
-bool Input::MouseRightDown() { return (kbState[VK_RBUTTON] & 0x80) != 0; }
-bool Input::MouseMiddleDown() { return (kbState[VK_MBUTTON] & 0x80) != 0; }
+bool Input::MouseLeftDown() { return (kbState[VK_LBUTTON] & 0x80) != 0 && !guiWantsMouse; }
+bool Input::MouseRightDown() { return (kbState[VK_RBUTTON] & 0x80) != 0 && !guiWantsMouse; }
+bool Input::MouseMiddleDown() { return (kbState[VK_MBUTTON] & 0x80) != 0 && !guiWantsMouse; }
 
 
 // ----------------------------------------------------------
 //  Is the specific mouse button up this frame?
 // ----------------------------------------------------------
-bool Input::MouseLeftUp() { return !(kbState[VK_LBUTTON] & 0x80); }
-bool Input::MouseRightUp() { return !(kbState[VK_RBUTTON] & 0x80); }
-bool Input::MouseMiddleUp() { return !(kbState[VK_MBUTTON] & 0x80); }
+bool Input::MouseLeftUp() { return !(kbState[VK_LBUTTON] & 0x80) && !guiWantsMouse; }
+bool Input::MouseRightUp() { return !(kbState[VK_RBUTTON] & 0x80) && !guiWantsMouse; }
+bool Input::MouseMiddleUp() { return !(kbState[VK_MBUTTON] & 0x80) && !guiWantsMouse; }
 
 
 // ----------------------------------------------------------
 //  Was the specific mouse button initially 
 // pressed or released this frame?
 // ----------------------------------------------------------
-bool Input::MouseLeftPress() { return kbState[VK_LBUTTON] & 0x80 && !(prevKbState[VK_LBUTTON] & 0x80); }
-bool Input::MouseLeftRelease() { return !(kbState[VK_LBUTTON] & 0x80) && prevKbState[VK_LBUTTON] & 0x80; }
+bool Input::MouseLeftPress() { return kbState[VK_LBUTTON] & 0x80 && !(prevKbState[VK_LBUTTON] & 0x80) && !guiWantsMouse; }
+bool Input::MouseLeftRelease() { return !(kbState[VK_LBUTTON] & 0x80) && prevKbState[VK_LBUTTON] & 0x80 && !guiWantsMouse; }
 
-bool Input::MouseRightPress() { return kbState[VK_RBUTTON] & 0x80 && !(prevKbState[VK_RBUTTON] & 0x80); }
-bool Input::MouseRightRelease() { return !(kbState[VK_RBUTTON] & 0x80) && prevKbState[VK_RBUTTON] & 0x80; }
+bool Input::MouseRightPress() { return kbState[VK_RBUTTON] & 0x80 && !(prevKbState[VK_RBUTTON] & 0x80) && !guiWantsMouse; }
+bool Input::MouseRightRelease() { return !(kbState[VK_RBUTTON] & 0x80) && prevKbState[VK_RBUTTON] & 0x80 && !guiWantsMouse; }
 
-bool Input::MouseMiddlePress() { return kbState[VK_MBUTTON] & 0x80 && !(prevKbState[VK_MBUTTON] & 0x80); }
-bool Input::MouseMiddleRelease() { return !(kbState[VK_MBUTTON] & 0x80) && prevKbState[VK_MBUTTON] & 0x80; }
+bool Input::MouseMiddlePress() { return kbState[VK_MBUTTON] & 0x80 && !(prevKbState[VK_MBUTTON] & 0x80) && !guiWantsMouse; }
+bool Input::MouseMiddleRelease() { return !(kbState[VK_MBUTTON] & 0x80) && prevKbState[VK_MBUTTON] & 0x80 && !guiWantsMouse; }

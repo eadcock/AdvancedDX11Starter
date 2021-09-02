@@ -8,6 +8,10 @@
 
 #include "WICTextureLoader.h"
 
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_win32.h"
+#include "imgui/imgui_impl_dx11.h"
+
 
 // Needed for a helper function to read compiled shader files from the hard drive
 #pragma comment(lib, "d3dcompiler.lib")
@@ -21,7 +25,10 @@ using namespace DirectX;
 
 // Helper macros for making texture and shader loading code more succinct
 #define LoadTexture(file, srv) CreateWICTextureFromFile(device.Get(), context.Get(), GetFullPathTo_Wide(file).c_str(), 0, srv.GetAddressOf())
+			
 #define LoadShader(type, file) new type(device.Get(), context.Get(), GetFullPathTo_Wide(file).c_str())
+
+constexpr int GCD(int a, int b) { return b == 0 ? a : GCD(b, a % b); }
 
 
 // --------------------------------------------------------
@@ -66,10 +73,11 @@ Game::~Game()
 	//   to call Release() on each DirectX object
 
 	// Clean up our other resources
-	for (auto& m : meshes) delete m;
+	for (auto& m : meshes) delete m.second;
 	for (auto& s : shaders) delete s; 
 	for (auto& m : materials) delete m;
 	for (auto& e : entities) delete e;
+	for (auto& t : textures) delete t.second;
 
 	// Delete any one-off objects
 	delete sky;
@@ -79,6 +87,10 @@ Game::~Game()
 
 	// Delete singletons
 	delete& Input::GetInstance();
+
+	ImGui_ImplDX11_Shutdown();
+	ImGui_ImplWin32_Shutdown();
+	ImGui::DestroyContext();
 }
 
 // --------------------------------------------------------
@@ -108,6 +120,17 @@ void Game::Init()
 		3.0f,		// Move speed
 		1.0f,		// Mouse look
 		this->width / (float)this->height); // Aspect ratio
+
+	// Initialize ImGui
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+
+	// Pick a style
+	ImGui::StyleColorsDark();
+
+	// Setup Platform/renderer backends
+	ImGui_ImplWin32_Init(hWnd);
+	ImGui_ImplDX11_Init(device.Get(), context.Get());
 }
 
 
@@ -137,61 +160,68 @@ void Game::LoadAssetsAndCreateEntities()
 	arial = new SpriteFont(device.Get(), GetFullPathTo_Wide(L"../../Assets/Textures/arial.spritefont").c_str());
 
 	// Make the meshes
-	Mesh* sphereMesh = new Mesh(GetFullPathTo("../../Assets/Models/sphere.obj").c_str(), device);
-	Mesh* helixMesh = new Mesh(GetFullPathTo("../../Assets/Models/helix.obj").c_str(), device);
-	Mesh* cubeMesh = new Mesh(GetFullPathTo("../../Assets/Models/cube.obj").c_str(), device);
-	Mesh* coneMesh = new Mesh(GetFullPathTo("../../Assets/Models/cone.obj").c_str(), device);
+	Mesh* sphereMesh = new Mesh("sphere", GetFullPathTo("../../Assets/Models/sphere.obj").c_str(), device);
+	Mesh* helixMesh = new Mesh("helix", GetFullPathTo("../../Assets/Models/helix.obj").c_str(), device);
+	Mesh* cubeMesh = new Mesh("cube", GetFullPathTo("../../Assets/Models/cube.obj").c_str(), device);
+	Mesh* coneMesh = new Mesh("cone", GetFullPathTo("../../Assets/Models/cone.obj").c_str(), device);
 
-	meshes.push_back(sphereMesh);
-	meshes.push_back(helixMesh);
-	meshes.push_back(cubeMesh);
-	meshes.push_back(coneMesh);
+	meshes["sphere"] = sphereMesh;
+	meshes["helix"] = helixMesh;
+	meshes["cube"] = cubeMesh;
+	meshes["cone"] = coneMesh;
 
 	
 	// Declare the textures we'll need
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> cobbleA,  cobbleN,  cobbleR,  cobbleM;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> floorA,  floorN,  floorR,  floorM;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> paintA,  paintN,  paintR,  paintM;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> scratchedA,  scratchedN,  scratchedR,  scratchedM;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> bronzeA,  bronzeN,  bronzeR,  bronzeM;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> roughA,  roughN,  roughR,  roughM;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> woodA,  woodN,  woodR,  woodM;
+	TextureBundle* cobble = new TextureBundle("cobble");
+	TextureBundle* floor = new TextureBundle("floor");
+	TextureBundle* paint = new TextureBundle("paint");
+	TextureBundle* scratched = new TextureBundle("scratched");
+	TextureBundle* bronze = new TextureBundle("bronze");
+	TextureBundle* rough = new TextureBundle("rough");
+	TextureBundle* wood = new TextureBundle("wood");
 
 	// Load the textures using our succinct LoadTexture() macro
-	LoadTexture(L"../../Assets/Textures/cobblestone_albedo.png", cobbleA);
-	LoadTexture(L"../../Assets/Textures/cobblestone_normals.png", cobbleN);
-	LoadTexture(L"../../Assets/Textures/cobblestone_roughness.png", cobbleR);
-	LoadTexture(L"../../Assets/Textures/cobblestone_metal.png", cobbleM);
+	LoadTexture(L"../../Assets/Textures/cobblestone_albedo.png", cobble->albedo);
+	LoadTexture(L"../../Assets/Textures/cobblestone_normals.png", cobble->normal);
+	LoadTexture(L"../../Assets/Textures/cobblestone_roughness.png", cobble->roughness);
+	LoadTexture(L"../../Assets/Textures/cobblestone_metal.png", cobble->metalness);
+	this->textures[cobble->name] = cobble;
 
-	LoadTexture(L"../../Assets/Textures/floor_albedo.png", floorA);
-	LoadTexture(L"../../Assets/Textures/floor_normals.png", floorN);
-	LoadTexture(L"../../Assets/Textures/floor_roughness.png", floorR);
-	LoadTexture(L"../../Assets/Textures/floor_metal.png", floorM);
+	LoadTexture(L"../../Assets/Textures/floor_albedo.png", floor->albedo);
+	LoadTexture(L"../../Assets/Textures/floor_normals.png", floor->normal);
+	LoadTexture(L"../../Assets/Textures/floor_roughness.png", floor->roughness);
+	LoadTexture(L"../../Assets/Textures/floor_metal.png", floor->metalness);
+	this->textures[floor->name] = floor;
 	
-	LoadTexture(L"../../Assets/Textures/paint_albedo.png", paintA);
-	LoadTexture(L"../../Assets/Textures/paint_normals.png", paintN);
-	LoadTexture(L"../../Assets/Textures/paint_roughness.png", paintR);
-	LoadTexture(L"../../Assets/Textures/paint_metal.png", paintM);
+	LoadTexture(L"../../Assets/Textures/paint_albedo.png", paint->albedo);
+	LoadTexture(L"../../Assets/Textures/paint_normals.png", paint->normal);
+	LoadTexture(L"../../Assets/Textures/paint_roughness.png", paint->roughness);
+	LoadTexture(L"../../Assets/Textures/paint_metal.png", paint->metalness);
+	this->textures[paint->name] = paint;
 	
-	LoadTexture(L"../../Assets/Textures/scratched_albedo.png", scratchedA);
-	LoadTexture(L"../../Assets/Textures/scratched_normals.png", scratchedN);
-	LoadTexture(L"../../Assets/Textures/scratched_roughness.png", scratchedR);
-	LoadTexture(L"../../Assets/Textures/scratched_metal.png", scratchedM);
+	LoadTexture(L"../../Assets/Textures/scratched_albedo.png", scratched->albedo);
+	LoadTexture(L"../../Assets/Textures/scratched_normals.png", scratched->normal);
+	LoadTexture(L"../../Assets/Textures/scratched_roughness.png", scratched->roughness);
+	LoadTexture(L"../../Assets/Textures/scratched_metal.png", scratched->metalness);
+	this->textures[scratched->name] = scratched;
 	
-	LoadTexture(L"../../Assets/Textures/bronze_albedo.png", bronzeA);
-	LoadTexture(L"../../Assets/Textures/bronze_normals.png", bronzeN);
-	LoadTexture(L"../../Assets/Textures/bronze_roughness.png", bronzeR);
-	LoadTexture(L"../../Assets/Textures/bronze_metal.png", bronzeM);
+	LoadTexture(L"../../Assets/Textures/bronze_albedo.png", bronze->albedo);
+	LoadTexture(L"../../Assets/Textures/bronze_normals.png", bronze->normal);
+	LoadTexture(L"../../Assets/Textures/bronze_roughness.png", bronze->roughness);
+	LoadTexture(L"../../Assets/Textures/bronze_metal.png", bronze->metalness);
+	this->textures[bronze->name] = bronze;
 	
-	LoadTexture(L"../../Assets/Textures/rough_albedo.png", roughA);
-	LoadTexture(L"../../Assets/Textures/rough_normals.png", roughN);
-	LoadTexture(L"../../Assets/Textures/rough_roughness.png", roughR);
-	LoadTexture(L"../../Assets/Textures/rough_metal.png", roughM);
+	LoadTexture(L"../../Assets/Textures/rough_albedo.png", rough->albedo);
+	LoadTexture(L"../../Assets/Textures/rough_normals.png", rough->normal);
+	LoadTexture(L"../../Assets/Textures/rough_roughness.png", rough->roughness);
+	LoadTexture(L"../../Assets/Textures/rough_metal.png", rough->metalness);
+	this->textures[rough->name] = rough;
 	
-	LoadTexture(L"../../Assets/Textures/wood_albedo.png", woodA);
-	LoadTexture(L"../../Assets/Textures/wood_normals.png", woodN);
-	LoadTexture(L"../../Assets/Textures/wood_roughness.png", woodR);
-	LoadTexture(L"../../Assets/Textures/wood_metal.png", woodM);
+	LoadTexture(L"../../Assets/Textures/wood_albedo.png", wood->albedo);
+	LoadTexture(L"../../Assets/Textures/wood_normals.png", wood->normal);
+	LoadTexture(L"../../Assets/Textures/wood_roughness.png", wood->roughness);
+	LoadTexture(L"../../Assets/Textures/wood_metal.png", wood->metalness);
+	this->textures[wood->name] = wood;
 
 	// Describe and create our sampler state
 	D3D11_SAMPLER_DESC sampDesc = {};
@@ -230,13 +260,13 @@ void Game::LoadAssetsAndCreateEntities()
 		context);
 
 	// Create basic materials
-	Material* cobbleMat2x = new Material(vertexShader, pixelShader, XMFLOAT4(1, 1, 1, 1), 256.0f, XMFLOAT2(2, 2), cobbleA, cobbleN, cobbleR, cobbleM, samplerOptions);
-	Material* floorMat = new Material(vertexShader, pixelShader, XMFLOAT4(1, 1, 1, 1), 256.0f, XMFLOAT2(2, 2), floorA, floorN, floorR, floorM, samplerOptions);
-	Material* paintMat = new Material(vertexShader, pixelShader, XMFLOAT4(1, 1, 1, 1), 256.0f, XMFLOAT2(2, 2), paintA, paintN, paintR, paintM, samplerOptions);
-	Material* scratchedMat = new Material(vertexShader, pixelShader, XMFLOAT4(1, 1, 1, 1), 256.0f, XMFLOAT2(2, 2), scratchedA, scratchedN, scratchedR, scratchedM, samplerOptions);
-	Material* bronzeMat = new Material(vertexShader, pixelShader, XMFLOAT4(1, 1, 1, 1), 256.0f, XMFLOAT2(2, 2), bronzeA, bronzeN, bronzeR, bronzeM, samplerOptions);
-	Material* roughMat = new Material(vertexShader, pixelShader, XMFLOAT4(1, 1, 1, 1), 256.0f, XMFLOAT2(2, 2), roughA, roughN, roughR, roughM, samplerOptions);
-	Material* woodMat = new Material(vertexShader, pixelShader, XMFLOAT4(1, 1, 1, 1), 256.0f, XMFLOAT2(2, 2), woodA, woodN, woodR, woodM, samplerOptions);
+	Material* cobbleMat2x = new Material(vertexShader, pixelShader, XMFLOAT4(1, 1, 1, 1), 256.0f, XMFLOAT2(2, 2), cobble, samplerOptions);
+	Material* floorMat = new Material(vertexShader, pixelShader, XMFLOAT4(1, 1, 1, 1), 256.0f, XMFLOAT2(2, 2), floor, samplerOptions);
+	Material* paintMat = new Material(vertexShader, pixelShader, XMFLOAT4(1, 1, 1, 1), 256.0f, XMFLOAT2(2, 2), paint, samplerOptions);
+	Material* scratchedMat = new Material(vertexShader, pixelShader, XMFLOAT4(1, 1, 1, 1), 256.0f, XMFLOAT2(2, 2), scratched, samplerOptions);
+	Material* bronzeMat = new Material(vertexShader, pixelShader, XMFLOAT4(1, 1, 1, 1), 256.0f, XMFLOAT2(2, 2), bronze, samplerOptions);
+	Material* roughMat = new Material(vertexShader, pixelShader, XMFLOAT4(1, 1, 1, 1), 256.0f, XMFLOAT2(2, 2), rough, samplerOptions);
+	Material* woodMat = new Material(vertexShader, pixelShader, XMFLOAT4(1, 1, 1, 1), 256.0f, XMFLOAT2(2, 2), wood, samplerOptions);
 
 	materials.push_back(cobbleMat2x);
 	materials.push_back(floorMat);
@@ -247,13 +277,13 @@ void Game::LoadAssetsAndCreateEntities()
 	materials.push_back(woodMat);
 
 	// Create PBR materials
-	Material* cobbleMat2xPBR = new Material(vertexShader, pixelShaderPBR, XMFLOAT4(1, 1, 1, 1), 256.0f, XMFLOAT2(2, 2), cobbleA, cobbleN, cobbleR, cobbleM, samplerOptions);
-	Material* floorMatPBR = new Material(vertexShader, pixelShaderPBR, XMFLOAT4(1, 1, 1, 1), 256.0f, XMFLOAT2(2, 2), floorA, floorN, floorR, floorM, samplerOptions);
-	Material* paintMatPBR = new Material(vertexShader, pixelShaderPBR, XMFLOAT4(1, 1, 1, 1), 256.0f, XMFLOAT2(2, 2), paintA, paintN, paintR, paintM, samplerOptions);
-	Material* scratchedMatPBR = new Material(vertexShader, pixelShaderPBR, XMFLOAT4(1, 1, 1, 1), 256.0f, XMFLOAT2(2, 2), scratchedA, scratchedN, scratchedR, scratchedM, samplerOptions);
-	Material* bronzeMatPBR = new Material(vertexShader, pixelShaderPBR, XMFLOAT4(1, 1, 1, 1), 256.0f, XMFLOAT2(2, 2), bronzeA, bronzeN, bronzeR, bronzeM, samplerOptions);
-	Material* roughMatPBR = new Material(vertexShader, pixelShaderPBR, XMFLOAT4(1, 1, 1, 1), 256.0f, XMFLOAT2(2, 2), roughA, roughN, roughR, roughM, samplerOptions);
-	Material* woodMatPBR = new Material(vertexShader, pixelShaderPBR, XMFLOAT4(1, 1, 1, 1), 256.0f, XMFLOAT2(2, 2), woodA, woodN, woodR, woodM, samplerOptions);
+	Material* cobbleMat2xPBR = new Material(vertexShader, pixelShaderPBR, XMFLOAT4(1, 1, 1, 1), 256.0f, XMFLOAT2(2, 2), cobble, samplerOptions);
+	Material* floorMatPBR = new Material(vertexShader, pixelShaderPBR, XMFLOAT4(1, 1, 1, 1), 256.0f, XMFLOAT2(2, 2), floor, samplerOptions);
+	Material* paintMatPBR = new Material(vertexShader, pixelShaderPBR, XMFLOAT4(1, 1, 1, 1), 256.0f, XMFLOAT2(2, 2), paint, samplerOptions);
+	Material* scratchedMatPBR = new Material(vertexShader, pixelShaderPBR, XMFLOAT4(1, 1, 1, 1), 256.0f, XMFLOAT2(2, 2), scratched, samplerOptions);
+	Material* bronzeMatPBR = new Material(vertexShader, pixelShaderPBR, XMFLOAT4(1, 1, 1, 1), 256.0f, XMFLOAT2(2, 2), bronze, samplerOptions);
+	Material* roughMatPBR = new Material(vertexShader, pixelShaderPBR, XMFLOAT4(1, 1, 1, 1), 256.0f, XMFLOAT2(2, 2), rough, samplerOptions);
+	Material* woodMatPBR = new Material(vertexShader, pixelShaderPBR, XMFLOAT4(1, 1, 1, 1), 256.0f, XMFLOAT2(2, 2), wood, samplerOptions);
 
 	materials.push_back(cobbleMat2xPBR);
 	materials.push_back(floorMatPBR);
@@ -428,6 +458,267 @@ void Game::Update(float deltaTime, float totalTime)
 	if (input.KeyDown(VK_ESCAPE)) Quit();
 	if (input.KeyPress(VK_TAB)) GenerateLights();
 
+	// Reset input manager's gui state so we don't taint our own input
+	input.SetGuiKeyboardCapture(false);
+	input.SetGuiMouseCapture(false);
+
+	// Set io info
+	ImGuiIO& io = ImGui::GetIO();
+	io.DeltaTime = deltaTime;
+	io.DisplaySize.x = (float)this->width;
+	io.DisplaySize.y = (float)this->height;
+	io.KeyCtrl = input.KeyDown(VK_CONTROL);
+	io.KeyShift = input.KeyDown(VK_SHIFT);
+	io.KeyAlt = input.KeyDown(VK_MENU);
+	io.MousePos.x = (float)input.GetMouseX();
+	io.MousePos.y = (float)input.GetMouseY();
+	io.MouseDown[0] = input.MouseLeftDown();
+	io.MouseDown[1] = input.MouseRightDown();
+	io.MouseDown[2] = input.MouseMiddleDown();
+	io.MouseWheel = input.GetMouseWheel();
+	input.GetKeyArray(io.KeysDown, 256);
+
+	// Reset the frame
+	ImGui_ImplDX11_NewFrame();
+	ImGui_ImplWin32_NewFrame();
+	ImGui::NewFrame();
+
+	// Determine new input capture
+	input.SetGuiKeyboardCapture(io.WantCaptureKeyboard);
+	input.SetGuiMouseCapture(io.WantCaptureMouse);
+
+	// ImGui::ShowDemoWindow();
+
+	ImGui::Begin("Config");
+	if (ImGui::CollapsingHeader("Info", ImGuiTreeNodeFlags_DefaultOpen)) {
+		ImGui::Text("FPS: %i", (int)io.Framerate);
+		if (ImGui::TreeNode("Window Size")) {
+			ImGui::BulletText("Width: %d", this->width);
+			ImGui::BulletText("Height: %d", this->height);
+			const int gcd = GCD(this->width, this->height);
+			ImGui::BulletText("Aspect Ratio: %d:%d (%f)", this->width / gcd, this->height / gcd, this->width / (float)this->height);
+			ImGui::TreePop();
+		}
+	}
+
+	if (ImGui::CollapsingHeader("Scene Info", ImGuiTreeNodeFlags_DefaultOpen)) {
+		if (ImGui::CollapsingHeader("Entities")) {
+			ImGui::Text("Amount: %d", this->entities.size());
+			static int current_index = 0;
+			GameEntity* current_entity = this->entities[current_index];
+			std::string preview = "Entity " + std::to_string(current_index);
+			if (ImGui::BeginCombo("EntitySelect", preview.c_str())) {
+				for (int n = 0; n < this->entities.size(); n++) {
+					const bool isSelected = (current_index == n);
+					preview = "Entity " + std::to_string(n);
+					if (ImGui::Selectable(preview.c_str(), isSelected)) {
+						current_index = n;
+						current_entity = this->entities[n];
+					}
+
+					if (isSelected) {
+						ImGui::SetItemDefaultFocus();
+					}
+				}
+				ImGui::EndCombo();
+			}
+
+			if (ImGui::TreeNode("Transform")) {
+				Transform* t = current_entity->GetTransform();
+				
+				XMFLOAT3 pos = t->GetPosition();
+				ImGui::DragFloat3("Position", &pos.x);
+				t->SetPosition(pos.x, pos.y, pos.z);
+
+				XMFLOAT3 pyr = t->GetPitchYawRoll();
+				ImGui::DragFloat3("Pitch/Yaw/Roll", &pyr.x);
+				t->SetRotation(pyr.x, pyr.y, pyr.z);
+
+				XMFLOAT3 scale = t->GetScale();
+				ImGui::DragFloat3("Scale", &scale.x);
+				t->SetScale(scale.x, scale.y, scale.z);
+
+				XMFLOAT4X4 worldMatrix = t->GetWorldMatrix();
+				ImGui::Text("World Matrix:");
+				if (ImGui::BeginTable("World Table", 4, ImGuiTableFlags_SizingFixedSame | ImGuiTableFlags_NoHostExtendX)) {
+					for (int row = 0; row < 4; row++) {
+						ImGui::TableNextRow();
+						for (int column = 0; column < 4; column++) {
+							ImGui::TableSetColumnIndex(column);
+							ImGui::Text("[%d,%d] %.2f", column, row, worldMatrix.m[column][row]);
+						}
+					}
+					ImGui::EndTable();
+				}
+
+				ImGui::Separator();
+				ImGui::TreePop();
+			}
+
+			if (ImGui::TreeNode("Material##Entity")) {
+				Material* m = current_entity->GetMaterial();
+				TextureBundle* textures = m->GetSRVs();
+
+				static std::string current_index_tex = textures->name;
+				TextureBundle* current_texture = this->textures.count(textures->name) > 0 ? this->textures[textures->name] : nullptr;
+				std::string preview = current_texture == nullptr ? "Custom" : current_texture->name;
+				if (ImGui::BeginCombo("Texture Group", preview.c_str())) {
+					bool inList = false;
+					for (auto& p : this->textures) {
+						const bool isSelected = (current_index_tex == p.first);
+						inList = inList || isSelected;
+						if (ImGui::Selectable(p.first.c_str(), isSelected)) {
+							current_index_tex = p.first;
+							m->SetSRVs(p.second);
+						}
+
+						if (isSelected) {
+							ImGui::SetItemDefaultFocus();
+						}
+					}
+					ImGui::Selectable("Custom##Entity", !inList);
+
+					ImGui::EndCombo();
+				}
+
+				if (ImGui::TreeNode("Albedo##Entity")) {
+					//ImGui::Button("Change##AlbedoTexture");
+					ImGui::Image(textures->albedo.Get(), ImVec2(200, 200));
+
+					ImGui::Separator();
+					ImGui::TreePop();
+				}
+
+				if (ImGui::TreeNode("Normal##Entity")) {
+					//ImGui::Button("Change##NormalTexture");
+					ImGui::Image(textures->normal.Get(), ImVec2(200, 200));
+
+					ImGui::Separator();
+					ImGui::TreePop();
+				}
+
+				if (ImGui::TreeNode("Roughness##Entity")) {
+					//ImGui::Button("Change##RoughnessTexture");
+					ImGui::Image(textures->roughness.Get(), ImVec2(200, 200));
+
+					ImGui::Separator();
+					ImGui::TreePop();
+				}
+
+				if (ImGui::TreeNode("Metalness##Entity")) {
+					//ImGui::Button("Change##MetalnessTexture");
+					ImGui::Image(textures->metalness.Get(), ImVec2(200, 200));
+
+					ImGui::Separator();
+					ImGui::TreePop();
+				}
+
+				ImGui::Separator();
+				ImGui::TreePop();
+			}
+
+			if (ImGui::TreeNode("Mesh##Entity")) {
+				Mesh* m = current_entity->GetMesh();
+				static std::string current_mesh = meshes.count(m->name) > 0 ? m->name : std::string();
+				if (ImGui::BeginCombo("Mesh##EntityLabel", current_mesh.c_str())) {
+					for (const auto& p : meshes) {
+						const bool isSelected = (current_mesh == p.first);
+						if (ImGui::Selectable(p.first.c_str(), isSelected)) {
+							current_mesh = p.first;
+							current_entity->SetMesh(meshes[p.first]);
+						}
+
+						if (isSelected) {
+							ImGui::SetItemDefaultFocus();
+						}
+					}
+
+					ImGui::EndCombo();
+				}
+				ImGui::TreePop();
+
+				ImGui::Text("\tIndex Count: %d", m->GetIndexCount());
+			}
+		}
+
+		if (ImGui::CollapsingHeader("Lights")) {
+			ImGui::Text("Amount: %d", this->lightCount);
+			for (int i = 0; i < this->lightCount; i++) {
+				Light l = this->lights[i];
+				int lightType = this->lights[i].Type;
+				const std::string str_label = "Light " + std::to_string(i);
+				if (ImGui::TreeNode(str_label.c_str())) {
+					const std::string str_barLabel = "LightInfo##" + str_label;
+					if (ImGui::BeginTabBar(str_barLabel.c_str())) {
+						const std::string str_overviewLabel = "Overview##" + str_label;
+						if (ImGui::BeginTabItem(str_overviewLabel.c_str())) {
+							const int types[] = { LIGHT_TYPE_DIRECTIONAL, LIGHT_TYPE_POINT, LIGHT_TYPE_SPOT };
+							static int cur_type_idx = 0;
+							const std::string str_typeLabel = "Type##" + std::to_string(i);
+							if (ImGui::BeginCombo(str_typeLabel.c_str(), TypeToString(types[cur_type_idx]))) {
+								for (int n = 0; n < IM_ARRAYSIZE(types); n++) {
+									const bool isSelected = (cur_type_idx == n);
+									if (ImGui::Selectable(TypeToString(types[n]), isSelected)) {
+										cur_type_idx = n;
+										this->lights[i].Type = types[n];
+									}
+
+									if (isSelected) {
+										ImGui::SetItemDefaultFocus();
+									}
+								}
+								ImGui::EndCombo();
+							}
+
+							const std::string str_intensityLabel = "Intensity##" + str_label;
+							ImGui::SliderFloat(str_intensityLabel.c_str(), &this->lights[i].Intensity, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+
+							if (this->lights[i].Type != LIGHT_TYPE_DIRECTIONAL) {
+								const std::string str_rangeLabel = "Range##" + str_label;
+								ImGui::SliderFloat(str_rangeLabel.c_str(), &this->lights[i].Range, 0.0f, 100.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+							}
+
+							if (lightType == LIGHT_TYPE_SPOT) {
+								const std::string str_falloffLabel = "Spot Falloff##" + str_label;
+								ImGui::SliderFloat(str_falloffLabel.c_str(), &this->lights[i].SpotFalloff, 0.0f, 100.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+							}
+
+							ImGui::EndTabItem();
+						}
+						const std::string str_orientationLabel = "Orientation##" + str_label;
+						if (ImGui::BeginTabItem(str_orientationLabel.c_str())) {
+							if (lightType != LIGHT_TYPE_POINT) {
+								const std::string str_directionLabel = "Direction##" + str_label;
+								ImGui::DragFloat3(str_directionLabel.c_str(), &this->lights[i].Direction.x);
+							}
+
+							if (lightType != LIGHT_TYPE_DIRECTIONAL) {
+								const std::string str_positionLabel = "Position##" + str_label;
+								ImGui::DragFloat3(str_positionLabel.c_str(), &this->lights[i].Position.x);
+							}
+
+							ImGui::EndTabItem();
+						}
+
+						const std::string str_colorLabel = "Color##" + str_label;
+						if (ImGui::BeginTabItem(str_colorLabel.c_str())) {
+							ImGui::ColorPicker3(str_colorLabel.c_str(), &this->lights[i].Color.x);
+
+							ImGui::EndTabItem();
+						}
+
+						ImGui::EndTabBar();
+					}
+					ImGui::Separator();
+					ImGui::TreePop();
+				}
+			}
+		}
+	}
+
+	ImGui::Text("This is text");
+	ImGui::End();
+
 }
 
 // --------------------------------------------------------
@@ -476,6 +767,8 @@ void Game::Draw(float deltaTime, float totalTime)
 	// Draw some UI
 	DrawUI();
 
+	ImGui::Render();
+	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
 	// Present the back buffer to the user
 	//  - Puts the final frame we're drawing into the window so the user can see it

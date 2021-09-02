@@ -5,13 +5,15 @@
 
 using namespace DirectX;
 
-Mesh::Mesh(Vertex* vertArray, int numVerts, unsigned int* indexArray, int numIndices, Microsoft::WRL::ComPtr<ID3D11Device> device)
+Mesh::Mesh(std::string name, Vertex* vertArray, int numVerts, unsigned int* indexArray, int numIndices, Microsoft::WRL::ComPtr<ID3D11Device> device)
 {
+	this->name = name;
 	CreateBuffers(vertArray, numVerts, indexArray, numIndices, device);
 }
 
-Mesh::Mesh(const char* objFile, Microsoft::WRL::ComPtr<ID3D11Device> device)
+Mesh::Mesh(std::string name, const char* objFile, Microsoft::WRL::ComPtr<ID3D11Device> device)
 {
+	this->name = name;
 	// File input object
 	std::ifstream obj(objFile);
 

@@ -17,6 +17,8 @@ public:
 	Material* GetMaterial();
 	Transform* GetTransform();
 
+	void SetMesh(Mesh* m) { this->mesh = m; }
+
 	void Draw(Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, Camera* camera);
 
 private:

@@ -9,10 +9,12 @@
 #include "SpriteBatch.h"
 #include "Lights.h"
 #include "Sky.h"
+#include "TextureBundle.h"
 
 #include <DirectXMath.h>
 #include <wrl/client.h> // Used for ComPtr - a smart pointer for COM objects
 #include <vector>
+#include <map>
 
 class Game 
 	: public DXCore
@@ -36,7 +38,7 @@ private:
 	byte prevKeys[256];
 
 	// Keep track of "stuff" to clean up
-	std::vector<Mesh*> meshes;
+	std::map<std::string, Mesh*> meshes;
 	std::vector<Material*> materials;
 	std::vector<GameEntity*>* currentScene;
 	std::vector<GameEntity*> entities;
@@ -65,6 +67,8 @@ private:
 
 	// Skybox
 	Sky* sky;
+
+	std::map <std::string, TextureBundle*> textures;
 
 	// General helpers for setup and drawing
 	void GenerateLights();

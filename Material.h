@@ -7,6 +7,7 @@
 #include "SimpleShader.h"
 #include "Camera.h"
 #include "Lights.h"
+#include "TextureBundle.h"
 
 class Material
 {
@@ -17,10 +18,7 @@ public:
 		DirectX::XMFLOAT4 color, 
 		float shininess, 
 		DirectX::XMFLOAT2 uvScale, 
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> albedo, 
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> normals, 
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> roughness, 
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metal, 
+		TextureBundle* textures,
 		Microsoft::WRL::ComPtr<ID3D11SamplerState> sampler);
 	~Material();
 
@@ -32,6 +30,10 @@ public:
 	void SetVS(SimpleVertexShader* vs) { this->vs = vs; }
 	void SetPS(SimplePixelShader* ps) { this->ps = ps; }
 
+	TextureBundle* GetSRVs() { return SRVs; }
+
+	void SetSRVs(TextureBundle* b) { this->SRVs = b; }
+
 private:
 	SimpleVertexShader* vs;
 	SimplePixelShader* ps;
@@ -40,10 +42,7 @@ private:
 	DirectX::XMFLOAT4 color;
 	float shininess;
 
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> albedoSRV;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> normalSRV;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> roughnessSRV;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalSRV;
+	TextureBundle* SRVs;
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> sampler;
 };
 

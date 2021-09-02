@@ -1,6 +1,8 @@
 #include "DXCore.h"
 #include "Input.h"
 
+#include "imgui/imgui.h"
+
 #include <WindowsX.h>
 #include <sstream>
 
@@ -634,6 +636,9 @@ LRESULT DXCore::ProcessMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 	// Check the incoming message and handle any we care about
 	switch (uMsg)
 	{
+	case WM_CHAR:
+		ImGui::GetIO().AddInputCharacter((char)wParam);
+		return 0;
 	// This is the message that signifies the window closing
 	case WM_DESTROY:
 		PostQuitMessage(0); // Send a quit message to our own program

@@ -1,27 +1,19 @@
 #include "Material.h"
 
-
-
 Material::Material(
 	SimpleVertexShader* vs,
 	SimplePixelShader* ps,
 	DirectX::XMFLOAT4 color,
 	float shininess,
 	DirectX::XMFLOAT2 uvScale,
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> albedo,
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> normals,
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> roughness,
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metal,
+	TextureBundle* textures,
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> sampler)
 {
 	this->vs = vs;
 	this->ps = ps;
 	this->color = color;
 	this->shininess = shininess;
-	this->albedoSRV = albedo;
-	this->normalSRV = normals;
-	this->roughnessSRV = roughness;
-	this->metalSRV = metal;
+	this->SRVs = textures;
 	this->sampler = sampler;
 	this->uvScale = uvScale;
 }
@@ -51,10 +43,10 @@ void Material::PrepareMaterial(Transform* transform, Camera* cam)
 	ps->CopyBufferData("perMaterial");
 
 	// Set SRVs
-	ps->SetShaderResourceView("AlbedoTexture", albedoSRV);
-	ps->SetShaderResourceView("NormalTexture", normalSRV);
-	ps->SetShaderResourceView("RoughnessTexture", roughnessSRV);
-	ps->SetShaderResourceView("MetalTexture", metalSRV);
+	ps->SetShaderResourceView("AlbedoTexture", SRVs->albedo);
+	ps->SetShaderResourceView("NormalTexture", SRVs->normal);
+	ps->SetShaderResourceView("RoughnessTexture", SRVs->roughness);
+	ps->SetShaderResourceView("MetalTexture", SRVs->metalness);
 
 	// Set sampler
 	ps->SetSamplerState("BasicSampler", sampler);
