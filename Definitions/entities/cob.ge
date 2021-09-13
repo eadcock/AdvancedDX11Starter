@@ -1,0 +1,9 @@
+{
+  "name": "cobSphere",
+  "mesh": "sphere",
+  "material": "cobble",
+  "scale": [2, 2, 2],
+  "position": [-6, -2, 0],
+  "rotation": [0, 0, 0],
+  "parent": "floor"
+}

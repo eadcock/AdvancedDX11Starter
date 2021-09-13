@@ -1,0 +1,10 @@
+{
+  "name": "bronzeSpherePBR",
+  "mesh": "sphere",
+  "material": "bronzePBR",
+  "scale": [2, 2, 2],
+  "position": [2, 2, 0],
+  "rotation": [0, 0, 0],
+  "parent": "paintSpherePBR",
+  "children": ["woodPBR", "roughPBR"]
+}

@@ -9,7 +9,6 @@
 #include "SpriteBatch.h"
 #include "Lights.h"
 #include "Sky.h"
-#include "TextureBundle.h"
 
 #include <DirectXMath.h>
 #include <wrl/client.h> // Used for ComPtr - a smart pointer for COM objects
@@ -38,14 +37,6 @@ private:
 	byte prevKeys[256];
 
 	// Keep track of "stuff" to clean up
-	std::map<std::string, Mesh*> meshes;
-	std::vector<Material*> materials;
-	std::vector<GameEntity*>* currentScene;
-	std::vector<GameEntity*> entities;
-	std::vector<GameEntity*> entitiesRandom;
-	std::vector<GameEntity*> entitiesLineup;
-	std::vector<GameEntity*> entitiesGradient;
-	std::vector<ISimpleShader*> shaders;
 	Camera* camera;
 
 	// Lights
@@ -62,13 +53,8 @@ private:
 	DirectX::SpriteFont* arial;
 	DirectX::SpriteBatch* spriteBatch;
 
-	// Texture related resources
-	Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerOptions;
-
 	// Skybox
 	Sky* sky;
-
-	std::map <std::string, TextureBundle*> textures;
 
 	// General helpers for setup and drawing
 	void GenerateLights();

@@ -5,6 +5,7 @@
 #include "Game.h"
 #include "Vertex.h"
 #include "Input.h"
+#include "AssetManager.h"
 
 #include "WICTextureLoader.h"
 
@@ -26,7 +27,6 @@ using namespace DirectX;
 // Helper macros for making texture and shader loading code more succinct
 #define LoadTexture(file, srv) CreateWICTextureFromFile(device.Get(), context.Get(), GetFullPathTo_Wide(file).c_str(), 0, srv.GetAddressOf())
 			
-#define LoadShader(type, file) new type(device.Get(), context.Get(), GetFullPathTo_Wide(file).c_str())
 
 constexpr int GCD(int a, int b) { return b == 0 ? a : GCD(b, a % b); }
 
@@ -72,13 +72,6 @@ Game::~Game()
 	// - If we weren't using smart pointers, we'd need
 	//   to call Release() on each DirectX object
 
-	// Clean up our other resources
-	for (auto& m : meshes) delete m.second;
-	for (auto& s : shaders) delete s; 
-	for (auto& m : materials) delete m;
-	for (auto& e : entities) delete e;
-	for (auto& t : textures) delete t.second;
-
 	// Delete any one-off objects
 	delete sky;
 	delete camera;
@@ -87,6 +80,7 @@ Game::~Game()
 
 	// Delete singletons
 	delete& Input::GetInstance();
+	delete& AssetManager::GetInstance();
 
 	ImGui_ImplDX11_Shutdown();
 	ImGui_ImplWin32_Shutdown();
@@ -101,8 +95,10 @@ void Game::Init()
 {
 	// Initialize the input manager with the window's handle
 	Input::GetInstance().Initialize(this->hWnd);
+	AssetManager::GetInstance().Initialize(GetExePath(), GetExePath_Wide(), device, context);
 
 	// Asset loading and entity creation
+	AssetManager::GetInstance().Load();
 	LoadAssetsAndCreateEntities();
 	
 	// Tell the input assembler stage of the pipeline what kind of
@@ -139,99 +135,9 @@ void Game::Init()
 // --------------------------------------------------------
 void Game::LoadAssetsAndCreateEntities()
 {
-	// Load shaders using our succinct LoadShader() macro
-	SimpleVertexShader* vertexShader	= LoadShader(SimpleVertexShader, L"VertexShader.cso");
-	SimplePixelShader* pixelShader		= LoadShader(SimplePixelShader, L"PixelShader.cso");
-	SimplePixelShader* pixelShaderPBR	= LoadShader(SimplePixelShader, L"PixelShaderPBR.cso");
-	SimplePixelShader* solidColorPS		= LoadShader(SimplePixelShader, L"SolidColorPS.cso");
-	
-	SimpleVertexShader* skyVS = LoadShader(SimpleVertexShader, L"SkyVS.cso");
-	SimplePixelShader* skyPS  = LoadShader(SimplePixelShader, L"SkyPS.cso");
-
-	shaders.push_back(vertexShader);
-	shaders.push_back(pixelShader);
-	shaders.push_back(pixelShaderPBR);
-	shaders.push_back(solidColorPS);
-	shaders.push_back(skyVS);
-	shaders.push_back(skyPS);
-
 	// Set up the sprite batch and load the sprite font
 	spriteBatch = new SpriteBatch(context.Get());
 	arial = new SpriteFont(device.Get(), GetFullPathTo_Wide(L"../../Assets/Textures/arial.spritefont").c_str());
-
-	// Make the meshes
-	Mesh* sphereMesh = new Mesh("sphere", GetFullPathTo("../../Assets/Models/sphere.obj").c_str(), device);
-	Mesh* helixMesh = new Mesh("helix", GetFullPathTo("../../Assets/Models/helix.obj").c_str(), device);
-	Mesh* cubeMesh = new Mesh("cube", GetFullPathTo("../../Assets/Models/cube.obj").c_str(), device);
-	Mesh* coneMesh = new Mesh("cone", GetFullPathTo("../../Assets/Models/cone.obj").c_str(), device);
-
-	meshes["sphere"] = sphereMesh;
-	meshes["helix"] = helixMesh;
-	meshes["cube"] = cubeMesh;
-	meshes["cone"] = coneMesh;
-
-	
-	// Declare the textures we'll need
-	TextureBundle* cobble = new TextureBundle("cobble");
-	TextureBundle* floor = new TextureBundle("floor");
-	TextureBundle* paint = new TextureBundle("paint");
-	TextureBundle* scratched = new TextureBundle("scratched");
-	TextureBundle* bronze = new TextureBundle("bronze");
-	TextureBundle* rough = new TextureBundle("rough");
-	TextureBundle* wood = new TextureBundle("wood");
-
-	// Load the textures using our succinct LoadTexture() macro
-	LoadTexture(L"../../Assets/Textures/cobblestone_albedo.png", cobble->albedo);
-	LoadTexture(L"../../Assets/Textures/cobblestone_normals.png", cobble->normal);
-	LoadTexture(L"../../Assets/Textures/cobblestone_roughness.png", cobble->roughness);
-	LoadTexture(L"../../Assets/Textures/cobblestone_metal.png", cobble->metalness);
-	this->textures[cobble->name] = cobble;
-
-	LoadTexture(L"../../Assets/Textures/floor_albedo.png", floor->albedo);
-	LoadTexture(L"../../Assets/Textures/floor_normals.png", floor->normal);
-	LoadTexture(L"../../Assets/Textures/floor_roughness.png", floor->roughness);
-	LoadTexture(L"../../Assets/Textures/floor_metal.png", floor->metalness);
-	this->textures[floor->name] = floor;
-	
-	LoadTexture(L"../../Assets/Textures/paint_albedo.png", paint->albedo);
-	LoadTexture(L"../../Assets/Textures/paint_normals.png", paint->normal);
-	LoadTexture(L"../../Assets/Textures/paint_roughness.png", paint->roughness);
-	LoadTexture(L"../../Assets/Textures/paint_metal.png", paint->metalness);
-	this->textures[paint->name] = paint;
-	
-	LoadTexture(L"../../Assets/Textures/scratched_albedo.png", scratched->albedo);
-	LoadTexture(L"../../Assets/Textures/scratched_normals.png", scratched->normal);
-	LoadTexture(L"../../Assets/Textures/scratched_roughness.png", scratched->roughness);
-	LoadTexture(L"../../Assets/Textures/scratched_metal.png", scratched->metalness);
-	this->textures[scratched->name] = scratched;
-	
-	LoadTexture(L"../../Assets/Textures/bronze_albedo.png", bronze->albedo);
-	LoadTexture(L"../../Assets/Textures/bronze_normals.png", bronze->normal);
-	LoadTexture(L"../../Assets/Textures/bronze_roughness.png", bronze->roughness);
-	LoadTexture(L"../../Assets/Textures/bronze_metal.png", bronze->metalness);
-	this->textures[bronze->name] = bronze;
-	
-	LoadTexture(L"../../Assets/Textures/rough_albedo.png", rough->albedo);
-	LoadTexture(L"../../Assets/Textures/rough_normals.png", rough->normal);
-	LoadTexture(L"../../Assets/Textures/rough_roughness.png", rough->roughness);
-	LoadTexture(L"../../Assets/Textures/rough_metal.png", rough->metalness);
-	this->textures[rough->name] = rough;
-	
-	LoadTexture(L"../../Assets/Textures/wood_albedo.png", wood->albedo);
-	LoadTexture(L"../../Assets/Textures/wood_normals.png", wood->normal);
-	LoadTexture(L"../../Assets/Textures/wood_roughness.png", wood->roughness);
-	LoadTexture(L"../../Assets/Textures/wood_metal.png", wood->metalness);
-	this->textures[wood->name] = wood;
-
-	// Describe and create our sampler state
-	D3D11_SAMPLER_DESC sampDesc = {};
-	sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-	sampDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-	sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-	sampDesc.Filter = D3D11_FILTER_ANISOTROPIC;
-	sampDesc.MaxAnisotropy = 16;
-	sampDesc.MaxLOD = D3D11_FLOAT32_MAX;
-	device->CreateSamplerState(&sampDesc, samplerOptions.GetAddressOf());
 
 
 	// Create the sky using a DDS cube map
@@ -244,6 +150,8 @@ void Game::LoadAssetsAndCreateEntities()
 		device,
 		context);*/
 
+	AssetManager& assets = AssetManager::GetInstance();
+
 	// Create the sky using 6 images
 	sky = new Sky(
 		GetFullPathTo_Wide(L"..\\..\\Assets\\Skies\\Night\\right.png").c_str(),
@@ -252,131 +160,21 @@ void Game::LoadAssetsAndCreateEntities()
 		GetFullPathTo_Wide(L"..\\..\\Assets\\Skies\\Night\\down.png").c_str(),
 		GetFullPathTo_Wide(L"..\\..\\Assets\\Skies\\Night\\front.png").c_str(),
 		GetFullPathTo_Wide(L"..\\..\\Assets\\Skies\\Night\\back.png").c_str(),
-		cubeMesh,
-		skyVS,
-		skyPS,
-		samplerOptions,
+		assets.GetMesh("cube"),
+		assets.GetVertexShader("SkyVS"),
+		assets.GetPixelShader("SkyPS"),
+		assets.samplerOptions,
 		device,
 		context);
-
-	// Create basic materials
-	Material* cobbleMat2x = new Material(vertexShader, pixelShader, XMFLOAT4(1, 1, 1, 1), 256.0f, XMFLOAT2(2, 2), cobble, samplerOptions);
-	Material* floorMat = new Material(vertexShader, pixelShader, XMFLOAT4(1, 1, 1, 1), 256.0f, XMFLOAT2(2, 2), floor, samplerOptions);
-	Material* paintMat = new Material(vertexShader, pixelShader, XMFLOAT4(1, 1, 1, 1), 256.0f, XMFLOAT2(2, 2), paint, samplerOptions);
-	Material* scratchedMat = new Material(vertexShader, pixelShader, XMFLOAT4(1, 1, 1, 1), 256.0f, XMFLOAT2(2, 2), scratched, samplerOptions);
-	Material* bronzeMat = new Material(vertexShader, pixelShader, XMFLOAT4(1, 1, 1, 1), 256.0f, XMFLOAT2(2, 2), bronze, samplerOptions);
-	Material* roughMat = new Material(vertexShader, pixelShader, XMFLOAT4(1, 1, 1, 1), 256.0f, XMFLOAT2(2, 2), rough, samplerOptions);
-	Material* woodMat = new Material(vertexShader, pixelShader, XMFLOAT4(1, 1, 1, 1), 256.0f, XMFLOAT2(2, 2), wood, samplerOptions);
-
-	materials.push_back(cobbleMat2x);
-	materials.push_back(floorMat);
-	materials.push_back(paintMat);
-	materials.push_back(scratchedMat);
-	materials.push_back(bronzeMat);
-	materials.push_back(roughMat);
-	materials.push_back(woodMat);
-
-	// Create PBR materials
-	Material* cobbleMat2xPBR = new Material(vertexShader, pixelShaderPBR, XMFLOAT4(1, 1, 1, 1), 256.0f, XMFLOAT2(2, 2), cobble, samplerOptions);
-	Material* floorMatPBR = new Material(vertexShader, pixelShaderPBR, XMFLOAT4(1, 1, 1, 1), 256.0f, XMFLOAT2(2, 2), floor, samplerOptions);
-	Material* paintMatPBR = new Material(vertexShader, pixelShaderPBR, XMFLOAT4(1, 1, 1, 1), 256.0f, XMFLOAT2(2, 2), paint, samplerOptions);
-	Material* scratchedMatPBR = new Material(vertexShader, pixelShaderPBR, XMFLOAT4(1, 1, 1, 1), 256.0f, XMFLOAT2(2, 2), scratched, samplerOptions);
-	Material* bronzeMatPBR = new Material(vertexShader, pixelShaderPBR, XMFLOAT4(1, 1, 1, 1), 256.0f, XMFLOAT2(2, 2), bronze, samplerOptions);
-	Material* roughMatPBR = new Material(vertexShader, pixelShaderPBR, XMFLOAT4(1, 1, 1, 1), 256.0f, XMFLOAT2(2, 2), rough, samplerOptions);
-	Material* woodMatPBR = new Material(vertexShader, pixelShaderPBR, XMFLOAT4(1, 1, 1, 1), 256.0f, XMFLOAT2(2, 2), wood, samplerOptions);
-
-	materials.push_back(cobbleMat2xPBR);
-	materials.push_back(floorMatPBR);
-	materials.push_back(paintMatPBR);
-	materials.push_back(scratchedMatPBR);
-	materials.push_back(bronzeMatPBR);
-	materials.push_back(roughMatPBR);
-	materials.push_back(woodMatPBR);
-
-
-
-	// === Create the PBR entities =====================================
-	GameEntity* cobSpherePBR = new GameEntity(sphereMesh, cobbleMat2xPBR);
-	cobSpherePBR->GetTransform()->SetScale(2, 2, 2);
-	cobSpherePBR->GetTransform()->SetPosition(-6, 2, 0);
-
-	GameEntity* floorSpherePBR = new GameEntity(sphereMesh, floorMatPBR);
-	floorSpherePBR->GetTransform()->SetScale(2, 2, 2);
-	floorSpherePBR->GetTransform()->SetPosition(-4, 2, 0);
-
-	GameEntity* paintSpherePBR = new GameEntity(sphereMesh, paintMatPBR);
-	paintSpherePBR->GetTransform()->SetScale(2, 2, 2);
-	paintSpherePBR->GetTransform()->SetPosition(-2, 2, 0);
-
-	GameEntity* scratchSpherePBR = new GameEntity(sphereMesh, scratchedMatPBR);
-	scratchSpherePBR->GetTransform()->SetScale(2, 2, 2);
-	scratchSpherePBR->GetTransform()->SetPosition(0, 2, 0);
-
-	GameEntity* bronzeSpherePBR = new GameEntity(sphereMesh, bronzeMatPBR);
-	bronzeSpherePBR->GetTransform()->SetScale(2, 2, 2);
-	bronzeSpherePBR->GetTransform()->SetPosition(2, 2, 0);
-
-	GameEntity* roughSpherePBR = new GameEntity(sphereMesh, roughMatPBR);
-	roughSpherePBR->GetTransform()->SetScale(2, 2, 2);
-	roughSpherePBR->GetTransform()->SetPosition(4, 2, 0);
-
-	GameEntity* woodSpherePBR = new GameEntity(sphereMesh, woodMatPBR);
-	woodSpherePBR->GetTransform()->SetScale(2, 2, 2);
-	woodSpherePBR->GetTransform()->SetPosition(6, 2, 0);
-
-	entities.push_back(cobSpherePBR);
-	entities.push_back(floorSpherePBR);
-	entities.push_back(paintSpherePBR);
-	entities.push_back(scratchSpherePBR);
-	entities.push_back(bronzeSpherePBR);
-	entities.push_back(roughSpherePBR);
-	entities.push_back(woodSpherePBR);
-
-	// Create the non-PBR entities ==============================
-	GameEntity* cobSphere = new GameEntity(sphereMesh, cobbleMat2x);
-	cobSphere->GetTransform()->SetScale(2, 2, 2);
-	cobSphere->GetTransform()->SetPosition(-6, -2, 0);
-
-	GameEntity* floorSphere = new GameEntity(sphereMesh, floorMat);
-	floorSphere->GetTransform()->SetScale(2, 2, 2);
-	floorSphere->GetTransform()->SetPosition(-4, -2, 0);
-
-	GameEntity* paintSphere = new GameEntity(sphereMesh, paintMat);
-	paintSphere->GetTransform()->SetScale(2, 2, 2);
-	paintSphere->GetTransform()->SetPosition(-2, -2, 0);
-
-	GameEntity* scratchSphere = new GameEntity(sphereMesh, scratchedMat);
-	scratchSphere->GetTransform()->SetScale(2, 2, 2);
-	scratchSphere->GetTransform()->SetPosition(0, -2, 0);
-
-	GameEntity* bronzeSphere = new GameEntity(sphereMesh, bronzeMat);
-	bronzeSphere->GetTransform()->SetScale(2, 2, 2);
-	bronzeSphere->GetTransform()->SetPosition(2, -2, 0);
-
-	GameEntity* roughSphere = new GameEntity(sphereMesh, roughMat);
-	roughSphere->GetTransform()->SetScale(2, 2, 2);
-	roughSphere->GetTransform()->SetPosition(4, -2, 0);
-
-	GameEntity* woodSphere = new GameEntity(sphereMesh, woodMat);
-	woodSphere->GetTransform()->SetScale(2, 2, 2);
-	woodSphere->GetTransform()->SetPosition(6, -2, 0);
-
-	entities.push_back(cobSphere);
-	entities.push_back(floorSphere);
-	entities.push_back(paintSphere);
-	entities.push_back(scratchSphere);
-	entities.push_back(bronzeSphere);
-	entities.push_back(roughSphere);
-	entities.push_back(woodSphere);
 
 
 	// Save assets needed for drawing point lights
 	// (Since these are just copies of the pointers,
 	//  we won't need to directly delete them as 
 	//  the original pointers will be cleaned up)
-	lightMesh = sphereMesh;
-	lightVS = vertexShader;
-	lightPS = solidColorPS;
+	lightMesh = assets.GetMesh("sphere");
+	lightVS = assets.GetVertexShader("VertexShader");
+	lightPS = assets.GetPixelShader("SolidColorPS");
 }
 
 
@@ -445,6 +243,74 @@ void Game::OnResize()
 		camera->UpdateProjectionMatrix(this->width / (float)this->height);
 }
 
+void DisplayTransformData(Transform* t) {
+	XMFLOAT3 pos = t->GetPosition();
+	ImGui::DragFloat3("Position", &pos.x);
+	t->SetPosition(pos.x, pos.y, pos.z);
+
+	XMFLOAT3 pyr = t->GetPitchYawRoll();
+	ImGui::DragFloat3("Pitch/Yaw/Roll", &pyr.x);
+	t->SetRotation(pyr.x, pyr.y, pyr.z);
+
+	XMFLOAT3 scale = t->GetScale();
+	ImGui::DragFloat3("Scale", &scale.x);
+	t->SetScale(scale.x, scale.y, scale.z);
+
+	t->MarkChildTransformDirty();
+
+	XMFLOAT4X4 worldMatrix = t->GetWorldMatrix();
+	ImGui::BulletText("World Matrix:");
+	if (ImGui::BeginTable("World Table", 4, ImGuiTableFlags_SizingFixedSame | ImGuiTableFlags_NoHostExtendX)) {
+		for (int row = 0; row < 4; row++) {
+			ImGui::TableNextRow();
+			for (int column = 0; column < 4; column++) {
+				ImGui::TableSetColumnIndex(column);
+				ImGui::Text("[%d,%d] %.2f", column, row, worldMatrix.m[column][row]);
+			}
+		}
+		ImGui::EndTable();
+	}
+
+	ImGui::Separator();
+
+	// Parent and Child panels can be duplicated, which means ImGui ids are duplicated. 
+	// It currently runs fine, but should figure a way to make ids unique.
+
+	// Can't use name
+	// Don't know how deep in the tree we are -- would have to make a variables that stores what has been displayed. Seems messy/bloated.
+	// Could just randomly generate a number
+
+	Transform* parent = t->GetParent();
+	if (parent != nullptr) {
+		std::string parent_label = "Parent - " + parent->GetAttachedEntity()->GetName();
+		if (ImGui::TreeNode(parent_label.c_str())) {
+			DisplayTransformData(parent);
+
+			ImGui::TreePop();
+			ImGui::Separator();
+		}
+	}
+
+	unsigned int child_count = t->GetChildCount();
+	if (child_count > 0) {
+		std::string group_label = "Children: " + std::to_string(child_count);
+		if (ImGui::TreeNode(group_label.c_str())) {
+			for (unsigned int i = 0; i < child_count; i++) {
+				Transform* child = t->GetChild(i);
+				std::string label = "Child " + std::to_string(i) + " - " + child->GetAttachedEntity()->GetName();
+				if (ImGui::TreeNode(label.c_str())) {
+					DisplayTransformData(child);
+
+					ImGui::TreePop();
+					ImGui::Separator();
+				}
+			}
+			ImGui::TreePop();
+			ImGui::Separator();
+		}
+	}
+}
+
 // --------------------------------------------------------
 // Update your game here - user input, move objects, AI, etc.
 // --------------------------------------------------------
@@ -452,6 +318,19 @@ void Game::Update(float deltaTime, float totalTime)
 {
 	// Update the camera
 	camera->Update(deltaTime);
+
+	float wave = sinf(totalTime);
+
+	AssetManager& assets = AssetManager::GetInstance();
+	auto entities = AssetManager::GetInstance().GetEntities();
+	
+	entities["cobSpherePBR"]->GetTransform()->Rotate(0, 0.01f, 0);
+	entities["floorSpherePBR"]->GetTransform()->Rotate(0.01f, 0, 0);
+	entities["floorSpherePBR"]->GetTransform()->SetScale(1 + wave / 2, 1 + wave / 2, 1 + wave / 2);
+	entities["paintSpherePBR"]->GetTransform()->Rotate(0, 0, 0.01f);
+	entities["bronzeSpherePBR"]->GetTransform()->Rotate(0, -0.01f, 0);
+
+	entities["cobSphere"]->GetTransform()->SetPosition(2 + wave * 2, 2 + wave * 2, 2 + wave * 2);
 
 	// Check individual input
 	Input& input = Input::GetInstance();
@@ -503,17 +382,15 @@ void Game::Update(float deltaTime, float totalTime)
 
 	if (ImGui::CollapsingHeader("Scene Info", ImGuiTreeNodeFlags_DefaultOpen)) {
 		if (ImGui::CollapsingHeader("Entities")) {
-			ImGui::Text("Amount: %d", this->entities.size());
-			static int current_index = 0;
-			GameEntity* current_entity = this->entities[current_index];
-			std::string preview = "Entity " + std::to_string(current_index);
-			if (ImGui::BeginCombo("EntitySelect", preview.c_str())) {
-				for (int n = 0; n < this->entities.size(); n++) {
-					const bool isSelected = (current_index == n);
-					preview = "Entity " + std::to_string(n);
-					if (ImGui::Selectable(preview.c_str(), isSelected)) {
-						current_index = n;
-						current_entity = this->entities[n];
+			ImGui::Text("Amount: %d", assets.GetEntities().size());
+			static std::string current_index = "";
+			GameEntity* current_entity = assets.GetEntity(current_index);
+			if (ImGui::BeginCombo("EntitySelect", current_index.c_str())) {
+				for (auto& p : assets.GetEntities()) {
+					const bool isSelected = (current_index == p.first);
+					if (ImGui::Selectable(p.first.c_str(), isSelected)) {
+						current_index = p.first;
+						current_entity = p.second;
 					}
 
 					if (isSelected) {
@@ -524,32 +401,7 @@ void Game::Update(float deltaTime, float totalTime)
 			}
 
 			if (ImGui::TreeNode("Transform")) {
-				Transform* t = current_entity->GetTransform();
-				
-				XMFLOAT3 pos = t->GetPosition();
-				ImGui::DragFloat3("Position", &pos.x);
-				t->SetPosition(pos.x, pos.y, pos.z);
-
-				XMFLOAT3 pyr = t->GetPitchYawRoll();
-				ImGui::DragFloat3("Pitch/Yaw/Roll", &pyr.x);
-				t->SetRotation(pyr.x, pyr.y, pyr.z);
-
-				XMFLOAT3 scale = t->GetScale();
-				ImGui::DragFloat3("Scale", &scale.x);
-				t->SetScale(scale.x, scale.y, scale.z);
-
-				XMFLOAT4X4 worldMatrix = t->GetWorldMatrix();
-				ImGui::Text("World Matrix:");
-				if (ImGui::BeginTable("World Table", 4, ImGuiTableFlags_SizingFixedSame | ImGuiTableFlags_NoHostExtendX)) {
-					for (int row = 0; row < 4; row++) {
-						ImGui::TableNextRow();
-						for (int column = 0; column < 4; column++) {
-							ImGui::TableSetColumnIndex(column);
-							ImGui::Text("[%d,%d] %.2f", column, row, worldMatrix.m[column][row]);
-						}
-					}
-					ImGui::EndTable();
-				}
+				DisplayTransformData(current_entity->GetTransform());
 
 				ImGui::Separator();
 				ImGui::TreePop();
@@ -560,11 +412,11 @@ void Game::Update(float deltaTime, float totalTime)
 				TextureBundle* textures = m->GetSRVs();
 
 				static std::string current_index_tex = textures->name;
-				TextureBundle* current_texture = this->textures.count(textures->name) > 0 ? this->textures[textures->name] : nullptr;
+				TextureBundle* current_texture = assets.GetBundle(textures->name);
 				std::string preview = current_texture == nullptr ? "Custom" : current_texture->name;
 				if (ImGui::BeginCombo("Texture Group", preview.c_str())) {
 					bool inList = false;
-					for (auto& p : this->textures) {
+					for (auto& p : AssetManager::GetInstance().GetBundles()) {
 						const bool isSelected = (current_index_tex == p.first);
 						inList = inList || isSelected;
 						if (ImGui::Selectable(p.first.c_str(), isSelected)) {
@@ -619,13 +471,13 @@ void Game::Update(float deltaTime, float totalTime)
 
 			if (ImGui::TreeNode("Mesh##Entity")) {
 				Mesh* m = current_entity->GetMesh();
-				static std::string current_mesh = meshes.count(m->name) > 0 ? m->name : std::string();
+				static std::string current_mesh = assets.GetMesh(m->name) != nullptr ? m->name : std::string();
 				if (ImGui::BeginCombo("Mesh##EntityLabel", current_mesh.c_str())) {
-					for (const auto& p : meshes) {
+					for (const auto& p : assets.GetMeshes()) {
 						const bool isSelected = (current_mesh == p.first);
 						if (ImGui::Selectable(p.first.c_str(), isSelected)) {
 							current_mesh = p.first;
-							current_entity->SetMesh(meshes[p.first]);
+							current_entity->SetMesh(p.second);
 						}
 
 						if (isSelected) {
@@ -716,7 +568,6 @@ void Game::Update(float deltaTime, float totalTime)
 		}
 	}
 
-	ImGui::Text("This is text");
 	ImGui::End();
 
 }
@@ -739,23 +590,23 @@ void Game::Draw(float deltaTime, float totalTime)
 		1.0f,
 		0);
 
+	AssetManager& assets = AssetManager::GetInstance();
 
 	// Draw all of the entities
-	for (auto ge : entities)
-	{
+	for (auto& p : assets.GetEntities()) {
 		// Set the "per frame" data
 		// Note that this should literally be set once PER FRAME, before
 		// the draw loop, but we're currently setting it per entity since 
 		// we are just using whichever shader the current entity has.  
 		// Inefficient!!!
-		SimplePixelShader* ps = ge->GetMaterial()->GetPS();
+		SimplePixelShader* ps = p.second->GetMaterial()->GetPS();
 		ps->SetData("Lights", (void*)(&lights[0]), sizeof(Light) * lightCount);
 		ps->SetInt("LightCount", lightCount);
 		ps->SetFloat3("CameraPosition", camera->GetTransform()->GetPosition());
 		ps->CopyBufferData("perFrame");
 
 		// Draw the entity
-		ge->Draw(context, camera);
+		p.second->Draw(context, camera);
 	}
 
 	// Draw the light sources

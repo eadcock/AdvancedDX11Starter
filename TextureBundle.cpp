@@ -8,6 +8,6 @@ TextureBundle::TextureBundle()
 	metalness = Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>();
 }
 
-TextureBundle::TextureBundle(const char* name) : TextureBundle::TextureBundle() {
+TextureBundle::TextureBundle(std::string name) : TextureBundle::TextureBundle() {
 	this->name = name;
 }

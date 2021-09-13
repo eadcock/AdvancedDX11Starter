@@ -1,0 +1,7 @@
+{
+  "name": "cobblestone",
+  "albedo": "Textures\\cobblestone_albedo",
+  "normal": "Textures\\cobblestone_normal",
+  "roughness": "Textures\\cobblestone_roughness",
+  "metal": "Textures\\cobblestone_metal"
+}

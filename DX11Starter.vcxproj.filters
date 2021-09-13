@@ -81,6 +81,9 @@
     <ClCompile Include="TextureBundle.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="AssetManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Vertex.h">
@@ -144,6 +147,9 @@
       <Filter>Header Files\imgui</Filter>
     </ClInclude>
     <ClInclude Include="TextureBundle.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="AssetManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

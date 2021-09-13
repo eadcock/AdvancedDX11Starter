@@ -1,0 +1,10 @@
+{
+  "name": "floorSphere",
+  "mesh": "sphere",
+  "material": "floor",
+  "scale": [2, 2, 2],
+  "position": [-4, -2, 0],
+  "rotation": [0, 0, 0],
+  "parent": "cobSpherePBR",
+  "children": ["cobSphere"]
+}

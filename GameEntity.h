@@ -11,20 +11,22 @@
 class GameEntity
 {
 public:
-	GameEntity(Mesh* mesh, Material* material);
+	GameEntity(std::string name, Mesh* mesh, Material* material);
 
 	Mesh* GetMesh();
 	Material* GetMaterial();
 	Transform* GetTransform();
+	std::string GetName();
 
+	void SetName(std::string n) { this->name = n; }
 	void SetMesh(Mesh* m) { this->mesh = m; }
 
 	void Draw(Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, Camera* camera);
 
 private:
-
+	std::string name;
 	Mesh* mesh;
 	Material* material;
-	Transform transform;
+	Transform transform = Transform(this);
 };
 

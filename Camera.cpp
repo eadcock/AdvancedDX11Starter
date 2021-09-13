@@ -61,9 +61,9 @@ void Camera::UpdateViewMatrix()
 	// This gives us our "look direction"
 	XMFLOAT3 rot = transform.GetPitchYawRoll();
 	XMVECTOR dir = XMVector3Rotate(XMVectorSet(0, 0, 1, 0), XMQuaternionRotationRollPitchYawFromVector(XMLoadFloat3(&rot)));
-
+	XMFLOAT3 pos = transform.GetPosition();
 	XMMATRIX view = XMMatrixLookToLH(
-		XMLoadFloat3(&transform.GetPosition()),
+		XMLoadFloat3(&pos),
 		dir,
 		XMVectorSet(0, 1, 0, 0));
 

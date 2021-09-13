@@ -8,6 +8,7 @@
 #include "Camera.h"
 #include "Lights.h"
 #include "TextureBundle.h"
+#include "Transform.h"
 
 class Material
 {

@@ -76,6 +76,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>false</ConformanceMode>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -87,6 +88,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>false</ConformanceMode>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -100,6 +102,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>false</ConformanceMode>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -115,6 +118,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>false</ConformanceMode>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -123,6 +127,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="AssetManager.cpp" />
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="DXCore.cpp" />
     <ClCompile Include="Game.cpp" />
@@ -144,6 +149,7 @@
     <ClCompile Include="Transform.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AssetManager.h" />
     <ClInclude Include="Camera.h" />
     <ClInclude Include="DXCore.h" />
     <ClInclude Include="Game.h" />
@@ -236,6 +242,8 @@
   <ImportGroup Label="ExtensionTargets">
     <Import Project="packages\Microsoft.XAudio2.Redist.1.2.4\build\native\Microsoft.XAudio2.Redist.targets" Condition="Exists('packages\Microsoft.XAudio2.Redist.1.2.4\build\native\Microsoft.XAudio2.Redist.targets')" />
     <Import Project="packages\directxtk_desktop_2017.2021.8.2.1\build\native\directxtk_desktop_2017.targets" Condition="Exists('packages\directxtk_desktop_2017.2021.8.2.1\build\native\directxtk_desktop_2017.targets')" />
+    <Import Project="packages\nlohmann.json.3.10.1\build\native\nlohmann.json.targets" Condition="Exists('packages\nlohmann.json.3.10.1\build\native\nlohmann.json.targets')" />
+    <Import Project="packages\boost.1.77.0.0\build\boost.targets" Condition="Exists('packages\boost.1.77.0.0\build\boost.targets')" />
   </ImportGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
@@ -243,5 +251,7 @@
     </PropertyGroup>
     <Error Condition="!Exists('packages\Microsoft.XAudio2.Redist.1.2.4\build\native\Microsoft.XAudio2.Redist.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\Microsoft.XAudio2.Redist.1.2.4\build\native\Microsoft.XAudio2.Redist.targets'))" />
     <Error Condition="!Exists('packages\directxtk_desktop_2017.2021.8.2.1\build\native\directxtk_desktop_2017.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\directxtk_desktop_2017.2021.8.2.1\build\native\directxtk_desktop_2017.targets'))" />
+    <Error Condition="!Exists('packages\nlohmann.json.3.10.1\build\native\nlohmann.json.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\nlohmann.json.3.10.1\build\native\nlohmann.json.targets'))" />
+    <Error Condition="!Exists('packages\boost.1.77.0.0\build\boost.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\boost.1.77.0.0\build\boost.targets'))" />
   </Target>
 </Project>

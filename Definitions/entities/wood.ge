@@ -1,0 +1,8 @@
+{
+  "name": "woodSphere",
+  "mesh": "sphere",
+  "material": "wood",
+  "scale": [2, 2, 2],
+  "position": [2, -2, 0],
+  "rotation": [0, 0, 0]
+}

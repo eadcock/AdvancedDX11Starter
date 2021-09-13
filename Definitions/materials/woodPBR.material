@@ -1,0 +1,10 @@
+{
+  "shader": {
+    "vertex": "VertexShader",
+    "pixel": "PixelShaderPBR"
+  },
+  "color": [1, 1, 1, 1],
+  "shininess": 256.0,
+  "uvScale": [2, 2],
+  "textures": "wood"
+}
