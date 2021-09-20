@@ -23,6 +23,7 @@ AssetManager::~AssetManager()
 	for (auto& p : materials) delete p.second;
 	for (auto& p : meshes) delete p.second;
 	for (auto& p : shaders) delete p.second;
+	for (auto& p : entities) delete p.second;
 }
 
 void AssetManager::LoadTextureBundles(std::vector<std::filesystem::directory_entry> bundlePaths) {

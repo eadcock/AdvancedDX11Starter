@@ -9,6 +9,7 @@
 #include "SpriteBatch.h"
 #include "Lights.h"
 #include "Sky.h"
+#include "Renderer.h"
 
 #include <DirectXMath.h>
 #include <wrl/client.h> // Used for ComPtr - a smart pointer for COM objects
@@ -56,10 +57,10 @@ private:
 	// Skybox
 	Sky* sky;
 
+	Renderer* renderer;
+
 	// General helpers for setup and drawing
 	void GenerateLights();
-	void DrawPointLights();
-	void DrawUI();
 
 	// Initialization helper method
 	void LoadAssetsAndCreateEntities();
