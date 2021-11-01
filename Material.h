@@ -20,10 +20,14 @@ public:
 		float shininess, 
 		DirectX::XMFLOAT2 uvScale, 
 		TextureBundle* textures,
-		Microsoft::WRL::ComPtr<ID3D11SamplerState> sampler);
+		Microsoft::WRL::ComPtr<ID3D11SamplerState> sampler,
+		Microsoft::WRL::ComPtr<ID3D11SamplerState> clampler);
 	~Material();
 
 	void PrepareMaterial(Transform* transform, Camera* cam);
+	void SetPerMaterialDataAndResources(bool copyToGPUNow = true);
+
+	bool GetRefractive() { return refractive; }
 
 	SimpleVertexShader* GetVS() { return vs; }
 	SimplePixelShader* GetPS() { return ps; }
@@ -42,8 +46,10 @@ private:
 	DirectX::XMFLOAT2 uvScale;
 	DirectX::XMFLOAT4 color;
 	float shininess;
+	bool refractive;
 
 	TextureBundle* SRVs;
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> sampler;
+	Microsoft::WRL::ComPtr<ID3D11SamplerState> clampSampler;
 };
 

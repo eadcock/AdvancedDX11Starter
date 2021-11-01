@@ -4,6 +4,7 @@
 #include "Mesh.h"
 #include "SimpleShader.h"
 #include "GameEntity.h"
+#include "Sky.h"
 
 #include <filesystem>
 #include <unordered_map>
@@ -43,6 +44,9 @@ public:
 
 	// Texture related resources
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerOptions;
+	Microsoft::WRL::ComPtr<ID3D11SamplerState> clamplerOptions;
+
+	Sky* sky;
 
 	TextureBundle* GetBundle(std::string tag);
 	std::unordered_map<std::string, TextureBundle*> GetBundles() { return textureBundles; }

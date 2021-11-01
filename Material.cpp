@@ -7,7 +7,8 @@ Material::Material(
 	float shininess,
 	DirectX::XMFLOAT2 uvScale,
 	TextureBundle* textures,
-	Microsoft::WRL::ComPtr<ID3D11SamplerState> sampler)
+	Microsoft::WRL::ComPtr<ID3D11SamplerState> sampler,
+	Microsoft::WRL::ComPtr<ID3D11SamplerState> clampler)
 {
 	this->vs = vs;
 	this->ps = ps;
@@ -16,6 +17,7 @@ Material::Material(
 	this->SRVs = textures;
 	this->sampler = sampler;
 	this->uvScale = uvScale;
+	this->clampSampler = clampler;
 }
 
 
@@ -50,4 +52,30 @@ void Material::PrepareMaterial(Transform* transform, Camera* cam)
 
 	// Set sampler
 	ps->SetSamplerState("BasicSampler", sampler);
+}
+
+void Material::SetPerMaterialDataAndResources(bool copyToGPUNow)
+{
+	// Set vertex shader per-material vars
+	vs->SetFloat2("uvScale", uvScale);
+	if (copyToGPUNow)
+	{
+		vs->CopyBufferData("perMaterial");
+	}
+
+	// Set pixel shader per-material vars
+	ps->SetFloat4("Color", color);
+	ps->SetFloat("Shininess", shininess);
+	if (copyToGPUNow)
+	{
+		ps->CopyBufferData("perMaterial");
+	}
+
+	// Loop and set any other resources
+	ps->SetShaderResourceView("AlbedoTexture", SRVs->albedo.Get());
+	ps->SetShaderResourceView("NormalTexture", SRVs->normal.Get());
+	ps->SetShaderResourceView("RoughnessTexture", SRVs->roughness.Get());
+	ps->SetShaderResourceView("MetalnessTexture", SRVs->metalness.Get());
+	ps->SetSamplerState("BasicSampler", sampler);
+	ps->SetSamplerState("ClampSampler", clampSampler);
 }

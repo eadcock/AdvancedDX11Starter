@@ -54,9 +54,6 @@ private:
 	DirectX::SpriteFont* arial;
 	DirectX::SpriteBatch* spriteBatch;
 
-	// Skybox
-	Sky* sky;
-
 	Renderer* renderer;
 
 	// General helpers for setup and drawing

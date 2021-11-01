@@ -73,7 +73,6 @@ Game::~Game()
 	//   to call Release() on each DirectX object
 
 	// Delete any one-off objects
-	delete sky;
 	delete camera;
 	delete arial;
 	delete spriteBatch;
@@ -129,7 +128,7 @@ void Game::Init()
 	ImGui_ImplWin32_Init(hWnd);
 	ImGui_ImplDX11_Init(device.Get(), context.Get());
 
-	renderer = new Renderer(device, context, swapChain, backBufferRTV, depthStencilView, width, height, sky, lights);
+	renderer = new Renderer(device, context, swapChain, backBufferRTV, depthStencilView, width, height, lights);
 }
 
 
@@ -156,19 +155,6 @@ void Game::LoadAssetsAndCreateEntities()
 	AssetManager& assets = AssetManager::GetInstance();
 
 	// Create the sky using 6 images
-	sky = new Sky(
-		GetFullPathTo_Wide(L"..\\..\\Assets\\Skies\\Night\\right.png").c_str(),
-		GetFullPathTo_Wide(L"..\\..\\Assets\\Skies\\Night\\left.png").c_str(),
-		GetFullPathTo_Wide(L"..\\..\\Assets\\Skies\\Night\\up.png").c_str(),
-		GetFullPathTo_Wide(L"..\\..\\Assets\\Skies\\Night\\down.png").c_str(),
-		GetFullPathTo_Wide(L"..\\..\\Assets\\Skies\\Night\\front.png").c_str(),
-		GetFullPathTo_Wide(L"..\\..\\Assets\\Skies\\Night\\back.png").c_str(),
-		assets.GetMesh("cube"),
-		assets.GetVertexShader("SkyVS"),
-		assets.GetPixelShader("SkyPS"),
-		assets.samplerOptions,
-		device,
-		context);
 
 
 	// Save assets needed for drawing point lights
@@ -238,6 +224,8 @@ void Game::GenerateLights()
 // --------------------------------------------------------
 void Game::OnResize()
 {
+	renderer->PreResize();
+
 	// Handle base-level DX resize stuff
 	DXCore::OnResize();
 
@@ -573,8 +561,48 @@ void Game::Update(float deltaTime, float totalTime)
 		}
 	}
 
-	ImGui::End();
+	// Refraction options
+	if (ImGui::CollapsingHeader("Refraction Options"))
+	{
+		ImVec2 size = ImGui::GetItemRectSize();
+		float rtHeight = size.x * ((float)height / width);
 
+		bool refrNormals = renderer->GetRefractionFromNormalMap();
+		if (ImGui::Button(refrNormals ? "Refraction from Normal Map" : "Refraction from IoR"))
+			renderer->SetRefractionFromNormalMap(!refrNormals);
+
+		ImGui::SameLine();
+		bool silh = renderer->GetUseRefractionSilhouette();
+		if (ImGui::Button(silh ? "Refraction Silhouette Enabled" : "Refraction Silhouette Disabled"))
+			renderer->SetUseRefractionSilhouette(!silh);
+
+		float refrScale = renderer->GetRefractionScale();
+		if (ImGui::SliderFloat("Refraction Scale", &refrScale, -1.0f, 1.0f))
+			renderer->SetRefractionScale(refrScale);
+
+		if (!refrNormals)
+		{
+			float ior = renderer->GetIndexOfRefraction();
+			if (ImGui::SliderFloat("Index of Refraction", &ior, 0.0f, 2.0f))
+				renderer->SetIndexOfRefraction(ior);
+		}
+
+
+	}
+
+
+	if (ImGui::CollapsingHeader("All Render Targets"))
+	{
+		ImVec2 size = ImGui::GetItemRectSize();
+		float rtHeight = size.x * ((float)height / width);
+
+		for (int i = 0; i < RenderTargetType::RENDER_TARGET_TYPE_COUNT; i++)
+		{
+			ImGui::Image(renderer->GetRenderTargetSRV((RenderTargetType)i).Get(), ImVec2(size.x, rtHeight));
+		}
+	}
+
+	ImGui::End();
 }
 
 // --------------------------------------------------------

@@ -19,6 +19,7 @@ constexpr auto DEFINITIONS_PATH = ".\\Definitions";
 
 AssetManager::~AssetManager()
 {
+	delete sky;
 	for (auto& p : textureBundles) delete p.second;
 	for (auto& p : materials) delete p.second;
 	for (auto& p : meshes) delete p.second;
@@ -96,7 +97,8 @@ void AssetManager::LoadMaterials(std::vector<std::filesystem::directory_entry> m
 			d["shininess"].get<float>(),
 			DirectX::XMFLOAT2(uv),
 			bundle,
-			samplerOptions
+			samplerOptions,
+			clamplerOptions
 		);
 
 		bundle = nullptr;
@@ -166,6 +168,11 @@ void AssetManager::Load()
 	shaders["SolidColorPS"] = LoadShader(SimplePixelShader, L"SolidColorPS.cso");
 	shaders["SkyPS"] = LoadShader(SimplePixelShader, L"SkyPS.cso");
 	shaders["SkyVS"] = LoadShader(SimpleVertexShader, L"SkyVS.cso");
+	shaders["FullscreenVS"] = LoadShader(SimpleVertexShader, L"FullscreenVS.cso");
+	shaders["RefractionPS"] = LoadShader(SimplePixelShader, L"RefractionPS.cso");
+	shaders["IBLBrdfLookUpTablePS"] = LoadShader(SimplePixelShader, L"IBLBrdfLookUpTablePS.cso");
+	shaders["IBLIrradianceMapPS"] = LoadShader(SimplePixelShader, L"IBLIrradianceMapPS.cso");
+	shaders["IBLSpecularConvolutionPS"] = LoadShader(SimplePixelShader, L"IBLSpecularConvolutionPS.cso");
 
 	for (auto& p : std::filesystem::recursive_directory_iterator(ASSET_PATH)) {
 		if (p.path().extension().compare(".png") == 0) {
@@ -193,6 +200,15 @@ void AssetManager::Load()
 	sampDesc.MaxLOD = D3D11_FLOAT32_MAX;
 	device->CreateSamplerState(&sampDesc, samplerOptions.GetAddressOf());
 
+	D3D11_SAMPLER_DESC clampDesc = {};
+	clampDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+	clampDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+	clampDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	clampDesc.Filter = D3D11_FILTER_ANISOTROPIC;
+	clampDesc.MaxAnisotropy = 16;
+	clampDesc.MaxLOD = D3D11_FLOAT32_MAX;
+	device->CreateSamplerState(&clampDesc, clamplerOptions.GetAddressOf());
+
 	std::vector<std::filesystem::directory_entry> bundlePaths;
 	std::vector<std::filesystem::directory_entry> materialPaths;
 	std::vector<std::filesystem::directory_entry> entityPaths;
@@ -211,6 +227,20 @@ void AssetManager::Load()
 	LoadTextureBundles(bundlePaths);
 	LoadMaterials(materialPaths);
 	LoadEntities(entityPaths);
+
+	sky = new Sky(
+		(wide_path + L"\\..\\..\\Assets\\Skies\\Night\\right.png").c_str(),
+		(wide_path + L"\\..\\..\\Assets\\Skies\\Night\\left.png").c_str(),
+		(wide_path + L"\\..\\..\\Assets\\Skies\\Night\\up.png").c_str(),
+		(wide_path + L"\\..\\..\\Assets\\Skies\\Night\\down.png").c_str(),
+		(wide_path + L"\\..\\..\\Assets\\Skies\\Night\\front.png").c_str(),
+		(wide_path + L"\\..\\..\\Assets\\Skies\\Night\\back.png").c_str(),
+		GetMesh("cube"),
+		GetVertexShader("SkyVS"),
+		GetPixelShader("SkyPS"),
+		samplerOptions,
+		device,
+		context);
 }
 
 void AssetManager::Initialize(std::string path, std::wstring wide_path, Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context)
