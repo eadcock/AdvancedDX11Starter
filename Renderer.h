@@ -8,6 +8,7 @@
 #include "Sky.h"
 #include "GameEntity.h"
 #include "AssetManager.h"
+#include "Emitter.h"
 
 using namespace DirectX;
 
@@ -20,11 +21,15 @@ private:
 	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> backBufferRTV;
 	Microsoft::WRL::ComPtr<ID3D11DepthStencilView> depthBufferDSV;
 
+	Microsoft::WRL::ComPtr<ID3D11BlendState> particleBlendAdditive;
+	Microsoft::WRL::ComPtr<ID3D11DepthStencilState> particleDepthState;
+
 	unsigned int windowWidth;
 	unsigned int windowHeight;
 
 	Sky* sky;
 	std::vector<Light>& lights;
+	std::vector<Emitter*>& emitters;
 
 public:
 	Renderer(
@@ -36,7 +41,8 @@ public:
 		unsigned int windowWidth,
 		unsigned int windowHeight,
 		Sky* sky,
-		std::vector<Light>& lights
+		std::vector<Light>& lights,
+		std::vector<Emitter*>& emitters
 	);
 
 	void PostResize(
@@ -46,7 +52,7 @@ public:
 		Microsoft::WRL::ComPtr<ID3D11DepthStencilView> depthBufferDSV
 	);
 
-	void Render(Camera* camera);
+	void Render(Camera* camera, float totalTime);
 
 private:
 	void DrawPointLights(Camera* camera);

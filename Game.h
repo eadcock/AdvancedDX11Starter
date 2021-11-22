@@ -10,6 +10,7 @@
 #include "Lights.h"
 #include "Sky.h"
 #include "Renderer.h"
+#include "Emitter.h"
 
 #include <DirectXMath.h>
 #include <wrl/client.h> // Used for ComPtr - a smart pointer for COM objects
@@ -43,6 +44,8 @@ private:
 	// Lights
 	std::vector<Light> lights;
 	int lightCount;
+
+	std::vector<Emitter*> emitters;
 
 	// These will be loaded along with other assets and
 	// saved to these variables for ease of access

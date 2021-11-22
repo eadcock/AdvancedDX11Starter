@@ -166,6 +166,8 @@ void AssetManager::Load()
 	shaders["SolidColorPS"] = LoadShader(SimplePixelShader, L"SolidColorPS.cso");
 	shaders["SkyPS"] = LoadShader(SimplePixelShader, L"SkyPS.cso");
 	shaders["SkyVS"] = LoadShader(SimpleVertexShader, L"SkyVS.cso");
+	shaders["ParticleVS"] = LoadShader(SimpleVertexShader, L"ParticleVS.cso");
+	shaders["ParticlePS"] = LoadShader(SimplePixelShader, L"ParticlePS.cso");
 
 	for (auto& p : std::filesystem::recursive_directory_iterator(ASSET_PATH)) {
 		if (p.path().extension().compare(".png") == 0) {
@@ -278,6 +280,13 @@ GameEntity* AssetManager::GetEntity(std::string tag)
 {
 	if (entities.contains(tag)) {
 		return entities[tag];
+	}
+	return nullptr;
+}
+
+Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> AssetManager::GetTexture(std::string tag) {
+	if (textures.contains(tag)) {
+		return textures[tag];
 	}
 	return nullptr;
 }

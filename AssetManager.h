@@ -48,6 +48,8 @@ public:
 	std::unordered_map<std::string, TextureBundle*> GetBundles() { return textureBundles; }
 	int GetBundleCount();
 
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetTexture(std::string tag);
+
 	Material* GetMaterial(std::string tag);
 	std::unordered_map<std::string, Material*> GetMaterials() { return materials; }
 	int GetMaterialCount() { return materials.size(); }

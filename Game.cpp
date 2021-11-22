@@ -72,6 +72,8 @@ Game::~Game()
 	// - If we weren't using smart pointers, we'd need
 	//   to call Release() on each DirectX object
 
+	for (auto& e : emitters) delete e;
+
 	// Delete any one-off objects
 	delete sky;
 	delete camera;
@@ -108,7 +110,7 @@ void Game::Init()
 	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	// Set up lights initially
-	lightCount = 64;
+	lightCount = 4;
 	GenerateLights();
 
 	// Make our camera
@@ -129,7 +131,7 @@ void Game::Init()
 	ImGui_ImplWin32_Init(hWnd);
 	ImGui_ImplDX11_Init(device.Get(), context.Get());
 
-	renderer = new Renderer(device, context, swapChain, backBufferRTV, depthStencilView, width, height, sky, lights);
+	renderer = new Renderer(device, context, swapChain, backBufferRTV, depthStencilView, width, height, sky, lights, emitters);
 }
 
 
@@ -178,6 +180,19 @@ void Game::LoadAssetsAndCreateEntities()
 	lightMesh = assets.GetMesh("sphere");
 	lightVS = assets.GetVertexShader("VertexShader");
 	lightPS = assets.GetPixelShader("SolidColorPS");
+
+	Emitter* emitter = new Emitter(
+		100,
+		2,
+		10.5f,
+		device,
+		context,
+		assets.GetVertexShader("ParticleVS"),
+		assets.GetPixelShader("ParticlePS"),
+		assets.GetTexture(".\\Assets\\Particles\\PNG (Black background)\\smoke_01")
+	);
+
+	emitters.push_back(emitter);
 }
 
 
@@ -328,14 +343,16 @@ void Game::Update(float deltaTime, float totalTime)
 
 	AssetManager& assets = AssetManager::GetInstance();
 	auto entities = AssetManager::GetInstance().GetEntities();
+
+	for (auto& e : emitters) e->Update(deltaTime, totalTime);
 	
-	entities["cobSpherePBR"]->GetTransform()->Rotate(0, 0.01f, 0);
+	/*entities["cobSpherePBR"]->GetTransform()->Rotate(0, 0.01f, 0);
 	entities["floorSpherePBR"]->GetTransform()->Rotate(0.01f, 0, 0);
 	entities["floorSpherePBR"]->GetTransform()->SetScale(1 + wave / 2, 1 + wave / 2, 1 + wave / 2);
 	entities["paintSpherePBR"]->GetTransform()->Rotate(0, 0, 0.01f);
 	entities["bronzeSpherePBR"]->GetTransform()->Rotate(0, -0.01f, 0);
 
-	entities["cobSphere"]->GetTransform()->SetPosition(2 + wave * 2, 2 + wave * 2, 2 + wave * 2);
+	entities["cobSphere"]->GetTransform()->SetPosition(2 + wave * 2, 2 + wave * 2, 2 + wave * 2);*/
 
 	// Check individual input
 	Input& input = Input::GetInstance();
@@ -582,5 +599,5 @@ void Game::Update(float deltaTime, float totalTime)
 // --------------------------------------------------------
 void Game::Draw(float deltaTime, float totalTime)
 {
-	renderer->Render(camera);
+	renderer->Render(camera, totalTime);
 }
